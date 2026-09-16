@@ -6,7 +6,7 @@ backgroundMusic.loop = true
 backgroundMusic.preload = 'auto'
 
 let musicStarted = false
-let soundVolume = 1
+let soundVolume = 0.01
 let soundMuted = false
 const soundListeners = new Set<() => void>()
 
