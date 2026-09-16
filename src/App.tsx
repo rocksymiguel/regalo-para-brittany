@@ -230,14 +230,14 @@ export default function App() {
     if (state.introGiftBeat < introGiftBeats.length - 1) return setState(current => ({ ...current, introGiftBeat: current.introGiftBeat + 1 }))
     begin()
   }
-  const submit = (skip = false) => {
-    const answer: AnswerValue = skip ? { option: 'skipped' } : (draft ?? state.answers[q.id] ?? (q.type === 'slider' ? 50 : q.type === 'multi-text' ? ['', '', ''] : q.type === 'multi-select' ? { selected: [], customText: '' } : ''))
-    if (!skip && empty(answer)) return
-    if (q.id === 'q32_cualidad' && !skip && q32NegativeAnswers.has(normalizeAnswer(answer)) && state.answers.q32_cualidad_retry !== 'attempted') {
+  const submit = () => {
+    const answer: AnswerValue = draft ?? state.answers[q.id] ?? (q.type === 'slider' ? 50 : q.type === 'multi-text' ? ['', '', ''] : q.type === 'multi-select' ? { selected: [], customText: '' } : '')
+    if (empty(answer)) return
+    if (q.id === 'q32_cualidad' && q32NegativeAnswers.has(normalizeAnswer(answer)) && state.answers.q32_cualidad_retry !== 'attempted') {
       setState(current => ({ ...current, answers: { ...current.answers, q32_cualidad_retry: 'attempted' }, reaction: { text: 'Hmm.', pose: 'thinking', action: 'retry', beats: [{ text: 'Hmm.', pose: 'thinking' }, { text: 'No te creo mucho.', pose: 'concerned' }, { text: 'Inténtalo una vez más.', pose: 'talking' }] }, reactionBeat: 0 }))
       return
     }
-    const reaction = q.getReaction(answer, skip)
+    const reaction = q.getReaction(answer)
     if (reaction.action === 'retry') {
       setState(current => ({ ...current, reaction, reactionBeat: 0 }))
       return
@@ -248,49 +248,6 @@ export default function App() {
     if (state.screen !== 'question' || q.id !== 'q22_inteligencia' || state.q22Stage !== 'overflow') return
     if (!state.q22OverflowReady) return
     setState(current => ({ ...current, q22Stage: 'final', q22OverflowReady: false, reaction: { text: 'Sí.', pose: 'happy', action: 'q22', beats: [{ text: 'Sí.', pose: 'happy' }, { text: 'Más o menos por aquí.', pose: 'talking' }] }, reactionBeat: 0 }))
-  }
-  const skipCurrentInput = () => {
-    if (!import.meta.env.DEV) return
-    if (state.screen === 'developer-wish') {
-      setWishDraft('')
-      if (state.activeWish === 1) return startNarrative('malecon')
-      if (state.activeWish === 2) {
-        setState(current => ({ ...current, screen: 'question', questionIndex: 20, phase: questions[20].phase, activeWish: null, reaction: null, reactionBeat: 0, progress: questions[20].progressPercent }))
-        return
-      }
-      setState(current => ({ ...current, screen: 'question', questionIndex: 30, phase: questions[30].phase, activeWish: null, wishIntroBeat: null, reaction: null, reactionBeat: 0, progress: questions[30].progressPercent }))
-      return
-    }
-    if (state.screen !== 'question' || state.reaction || (q.id === 'q28_no_tocar' && state.q28Alert)) return
-    if (q.number === 10) {
-      setState(current => ({ ...current, screen: 'developer-wish', activeWish: 1, reaction: null, reactionBeat: 0 }))
-      setDraft(null)
-      return
-    }
-    if (q.number === 13) { startNarrative('it-takes-two'); setDraft(null); return }
-    if (q.number === 15) { startNarrative('medical-intro'); setDraft(null); return }
-    if (q.number === 18) { startNarrative('medical-alert'); setDraft(null); return }
-    if (q.number === 20) {
-      setState(current => ({ ...current, screen: 'developer-wish', activeWish: 2, reaction: null, reactionBeat: 0 }))
-      setDraft(null)
-      return
-    }
-    if (q.number === 30) {
-      setState(current => ({ ...current, screen: 'developer-wish', activeWish: 3, wishIntroBeat: 0, reaction: null, reactionBeat: 0, progress: 75 }))
-      setDraft(null)
-      return
-    }
-    if (q.number === 40) {
-      setState(current => ({ ...current, screen: 'final-processing', reaction: null, reactionBeat: 0, finalStage: 'processing-997', finalBeat: 0, phase: 'VERIFICACIÓN FINAL', progress: 99.7 }))
-      setDraft(null)
-      return
-    }
-    const nextIndex = state.questionIndex + 1
-    const nextQuestion = questions[nextIndex]
-    if (!nextQuestion) return
-    const enteringQ26 = nextQuestion.id === 'q26_audio'
-    setState(current => ({ ...current, questionIndex: nextIndex, phase: nextQuestion.phase, progress: nextQuestion.progressPercent, reaction: null, reactionBeat: 0, q28Alert: false, q22Stage: 'idle', q26IntroBeat: enteringQ26 && !current.q26IntroSeen ? 0 : null }))
-    setDraft(null)
   }
   const pressForbiddenButton = () => {
     setState(current => ({
@@ -335,20 +292,6 @@ export default function App() {
     if (q.number === 40) return beginQuestionnaireSubmission()
     setState(current => ({ ...current, questionIndex: current.questionIndex + 1, phase: questions[current.questionIndex + 1].phase, reaction: null, reactionBeat: 0 }))
     setDraft(null)
-  }
-  const back = () => {
-    if (state.reaction) {
-      setState(current => ({ ...current, reaction: null, reactionBeat: 0, q22Stage: q.id === 'q22_inteligencia' ? 'idle' : current.q22Stage }))
-      setDraft(null)
-      return
-    }
-    if (state.questionIndex > 0) {
-      setState(current => {
-        const previousQuestion = questions[current.questionIndex - 1]
-        return { ...current, questionIndex: current.questionIndex - 1, phase: previousQuestion.phase, progress: previousQuestion.progressPercent, q28Alert: false, q22Stage: 'idle', q26IntroBeat: null }
-      })
-      setDraft(null)
-    }
   }
   const advanceNarrative = () => {
     const narrative = state.narrative
@@ -497,7 +440,7 @@ export default function App() {
     const wishDialogue = first ? 'Espera.\n\nAparentemente completar esta parte de la verificación te da derecho a pedirle algo al desarrollador.\n\nYo no recuerdo haber aprobado esta función.' : third ? 'El sistema está listo para registrar tu último deseo.' : 'Ah, no.\n\nOtra vez esto.'
     const placeholder = first ? 'Pídele algo al desarrollador...' : third ? 'Pídele una última cosa al desarrollador...' : 'Pídele otra cosa al desarrollador...'
     const helper = first ? 'El cumplimiento del deseo no está contractualmente garantizado.' : third ? 'Puedes pedir lo que quieras.' : 'No existe garantía legal, moral ni económica de cumplimiento.'
-    return <GameLayout pose={third ? 'talking' : 'surprised'} dialogue={wishDialogue} progress={state.progress} phase={state.phase ?? ''} onReset={reset}><section className="wish-card"><span className="eyebrow">BONUS DESBLOQUEADO</span><h1>{title}</h1><textarea className="long-answer" value={wishDraft} onChange={event => setWishDraft(event.target.value)} placeholder={placeholder} rows={7} /><p className="helper-text">{helper}</p>{third && <p className="wish-secondary-helper">La falta de presupuesto continúa siendo un problema del desarrollador.</p>}<nav className="edit-nav"><span /><button className="primary-button" onClick={submitWish} disabled={!wishDraft.trim()}>CONFIRMAR</button><span /></nav>{import.meta.env.DEV && <button className="dev-skip" type="button" onClick={skipCurrentInput}>SKIP →</button>}</section></GameLayout>
+    return <GameLayout pose={third ? 'talking' : 'surprised'} dialogue={wishDialogue} progress={state.progress} phase={state.phase ?? ''} onReset={reset}><section className="wish-card"><span className="eyebrow">BONUS DESBLOQUEADO</span><h1>{title}</h1><textarea className="long-answer" value={wishDraft} onChange={event => setWishDraft(event.target.value)} placeholder={placeholder} rows={7} /><p className="helper-text">{helper}</p>{third && <p className="wish-secondary-helper">La falta de presupuesto continúa siendo un problema del desarrollador.</p>}<nav className="edit-nav"><span /><button className="primary-button" onClick={submitWish} disabled={!wishDraft.trim()}>CONFIRMAR</button><span /></nav></section></GameLayout>
   }
   if (state.screen === 'end-narrative') {
     const beat = closingBeats[state.endBeat]
@@ -538,10 +481,8 @@ export default function App() {
   const overflowIntelligence = 103 + Math.round(originalIntelligence * 0.13)
   const answerForConfirmation = draft ?? state.answers[q.id] ?? (q.type === 'slider' ? 50 : q.type === 'multi-text' ? ['', '', ''] : q.type === 'multi-select' ? { selected: [], customText: '' } : '')
   const canConfirm = !empty(answerForConfirmation)
-  const isSkippedAnswer = typeof saved === 'object' && !Array.isArray(saved) && saved.option === 'skipped'
   const showingQ28Alert = q.id === 'q28_no_tocar' && state.q28Alert
   const displayedProgress = showingQ28Alert ? Math.max(0, state.progress - 15) : state.progress
-  const showDevSkip = import.meta.env.DEV && state.screen === 'question' && !activeReaction && !showingQ28Alert
   const dialogue = activeReaction?.text ?? (q.id === 'q28_no_tocar' ? (showingQ28Alert ? '...' : 'Esta es sencilla.\n\nNO presiones el botón rojo.') : q.type === 'biometric-scan' && !scanDone ? 'Hmm...\n\nEsto está tardando más de lo esperado.' : 'Estoy lista. Elige con cuidado; mis protocolos son muy sofisticados.')
 
   if (q.id === 'q26_audio' && state.q26IntroBeat !== null) {
@@ -550,15 +491,14 @@ export default function App() {
   }
 
   if (q.id === 'q22_inteligencia' && state.q22Stage === 'overflow') {
-    return <GameLayout pose="thinking" dialogue="" progress={q.progressPercent} phase={q.phase} onReset={reset} focus contentFocus hideDialogue><section className="question-card q22-overflow-card"><span className="eyebrow">{q.phase}</span><h1>{q.prompt}</h1><div className="overflow-intelligence overflow-stage" style={{ '--overflow-value': `${overflowIntelligence}%` } as React.CSSProperties}><div className="overflow-track"><i /></div><strong>{overflowIntelligence}%</strong></div>{state.q22OverflowReady && <button className="primary-button" type="button" onClick={advanceQ22Overflow}>CONTINUAR →</button>}{import.meta.env.DEV && <button className="dev-skip" type="button" onClick={skipCurrentInput}>SKIP →</button>}</section></GameLayout>
+    return <GameLayout pose="thinking" dialogue="" progress={q.progressPercent} phase={q.phase} onReset={reset} focus contentFocus hideDialogue><section className="question-card q22-overflow-card"><span className="eyebrow">{q.phase}</span><h1>{q.prompt}</h1><div className="overflow-intelligence overflow-stage" style={{ '--overflow-value': `${overflowIntelligence}%` } as React.CSSProperties}><div className="overflow-track"><i /></div><strong>{overflowIntelligence}%</strong></div>{state.q22OverflowReady && <button className="primary-button" type="button" onClick={advanceQ22Overflow}>CONTINUAR →</button>}</section></GameLayout>
   }
 
   return <GameLayout pose={pose} dialogue={dialogue} progress={displayedProgress} phase={q.phase} onReset={reset} focus={Boolean(activeReaction)} onDialogueAdvance={activeReaction ? nextAfterQuestion : undefined} continueLabel={activeReaction?.action === 'retry' ? 'Cambiar respuesta →' : 'Siguiente →'}>
     <section className={`question-card ${q.type === 'medical-impossible-case' ? 'impossible-case' : ''} ${q.id === 'q28_no_tocar' ? 'forbidden-question' : ''}`}>
       {q.type === 'biometric-scan' && !scanDone ? <div className="biometric-scan"><span className="eyebrow">ESCANEO BIOMÉTRICO AVANZADO</span><div className="scan-head"><span>◉</span></div><p>ÁREA FRONTAL: PROCESANDO...</p><button className="primary-button" onClick={() => setState(current => ({ ...current, answers: { ...current.answers, q21_scan: 'done' } }))}>Completar escaneo</button></div>
-        : q.type === 'forbidden-button' ? <><span className="eyebrow">{q.phase}</span><h1>{q.prompt}</h1><p className="helper-text">{q.helperText}</p><div className={`forbidden-panel ${showingQ28Alert ? 'compromised' : ''}`}><button className="forbidden-button" type="button" onClick={pressForbiddenButton} disabled={showingQ28Alert}>NO TOCAR</button>{showingQ28Alert && <div className="compromised-alert" role="status"><strong>VERIFICACIÓN<br />COMPROMETIDA</strong><span>{displayedProgress}%</span></div>}</div>{!showingQ28Alert && <nav className="edit-nav"><button className="back-arrow" onClick={back}>← Volver</button><span /><span /></nav>}</>
-          : <><span className="eyebrow">{q.label ?? q.phase}</span><h1>{q.prompt}</h1>{q.helperText && <p className="helper-text">{q.helperText}</p>}<QuestionRenderer question={q} savedAnswer={saved} onChange={setDraft} playbackEnabled={!activeReaction} />{isSkippedAnswer && !activeReaction && <p className="skip-status">Respuesta marcada como: {q.skipLabel}</p>}{q.skipLabel && !activeReaction && <button className="secondary-button" onClick={() => submit(true)}>{q.skipLabel}</button>}{!activeReaction && <nav className="edit-nav"><button className="back-arrow" onClick={back} disabled={state.questionIndex === 0}>← Volver</button><button className="primary-button" onClick={() => submit()} disabled={!canConfirm}>CONFIRMAR</button><span /></nav>}</>}
-      {showDevSkip && <button className="dev-skip" type="button" onClick={skipCurrentInput}>SKIP →</button>}
+        : q.type === 'forbidden-button' ? <><span className="eyebrow">{q.phase}</span><h1>{q.prompt}</h1><p className="helper-text">{q.helperText}</p><div className={`forbidden-panel ${showingQ28Alert ? 'compromised' : ''}`}><button className="forbidden-button" type="button" onClick={pressForbiddenButton} disabled={showingQ28Alert}>NO TOCAR</button>{showingQ28Alert && <div className="compromised-alert" role="status"><strong>VERIFICACIÓN<br />COMPROMETIDA</strong><span>{displayedProgress}%</span></div>}</div></>
+          : <><span className="eyebrow">{q.label ?? q.phase}</span><h1>{q.prompt}</h1>{q.helperText && <p className="helper-text">{q.helperText}</p>}<QuestionRenderer question={q} savedAnswer={saved} onChange={setDraft} playbackEnabled={!activeReaction} />{!activeReaction && <nav className="edit-nav"><span /><button className="primary-button" onClick={submit} disabled={!canConfirm}>CONFIRMAR</button><span /></nav>}</>}
     </section>
   </GameLayout>
 }
