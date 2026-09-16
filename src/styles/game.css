@@ -9,7 +9,7 @@ button { cursor: pointer; }
 .game-scene, .start-scene { isolation: isolate; position: relative; width: 100vw; height: 100dvh; min-height: 0; overflow: hidden; background: #376d6e var(--room-background) center / cover no-repeat; }
 .start-scene { --room-background: url('../assets/background.png'); display: grid; place-items: center; padding: 28px; }
 .scene-wash { position: absolute; z-index: 0; inset: 0; background: linear-gradient(90deg, rgba(28,61,54,.25), rgba(255,243,206,.08) 55%, rgba(33,68,63,.2)); pointer-events: none; }
-.progress-header { position: relative; z-index: 1; min-height: 76px; display: flex; align-items: center; justify-content: center; padding: 14px 4vw; color: #fff5d6; background: rgba(76,47,31,.86); border-bottom: 4px solid #e0ae69; box-shadow: 0 4px 0 rgba(52,30,21,.35); }
+.progress-header { position: relative; z-index: 10; min-height: 76px; display: flex; align-items: center; justify-content: center; padding: 14px 4vw; color: #fff5d6; background: rgba(76,47,31,.86); border-bottom: 4px solid #e0ae69; box-shadow: 0 4px 0 rgba(52,30,21,.35); }
 .brand, .eyebrow, .dialogue-name { font-family: 'Press Start 2P', monospace; letter-spacing: .06em; }
 .brand { position: absolute; left: 4vw; font-size: .68rem; line-height: 1.5; }
 .progress-readout { width: min(1200px, 72vw); display: flex; align-items: center; gap: 14px; font-size: .72rem; font-weight: 900; letter-spacing: .08em; }
